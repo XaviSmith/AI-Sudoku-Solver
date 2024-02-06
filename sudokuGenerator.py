@@ -4,6 +4,7 @@ import time
 
 gridSize = 9
 maxStackDepth = 20
+blankSquares = 40
 
 #e.g. check(from row2, index3, for 9 in, y + delta_y1, y + delta_y2)
 def check_neighbouring_cells(row, row_index, number, delta1, delta2):
@@ -79,6 +80,27 @@ def pretty_Print(grid):
         if(r + 1) % 3 == 0 and (r + 1) != gridSize:
             print("-" * ( (gridSize * 3) + 2))
 
+#Generates a list of coordinates for the grid (e.g. [ [0,0], [0,1] ... [9,9] ])
+#TODO: Generate coordinates while generating the grid
+def generate_grid_coordinates():
+    result = []
+
+    for i in range(gridSize):
+        for j in range(gridSize):
+            result.append([i, j])
+
+    return result
+
+def remove_spaces(grid):
+    grid_coordinates = generate_grid_coordinates()
+    random.shuffle(grid_coordinates)
+
+    for num_blanks in range(blankSquares):
+        x,y = grid_coordinates[num_blanks]
+        grid[x][y] = ' '
+        num_blanks += 1
+
+
 def generate(depth = 0):
     if depth == maxStackDepth:
         print("MAX STACK DEPTH REACHED. TRY AGAIN")
@@ -112,6 +134,9 @@ def generate(depth = 0):
                 new_row.append(_number)
 
         grid.append(new_row)
+    pretty_Print(grid)
+    remove_spaces(grid)
+    print("\n")
     pretty_Print(grid)
 
 generate()
