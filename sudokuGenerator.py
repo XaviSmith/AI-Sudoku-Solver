@@ -1,6 +1,9 @@
 #Square matrix. Default 9x9
 import random
+import time
+
 gridSize = 9
+maxStackDepth = 20
 
 #e.g. check(from row2, index3, for 9 in, y + delta_y1, y + delta_y2)
 def check_neighbouring_cells(row, row_index, number, delta1, delta2):
@@ -50,11 +53,11 @@ def is_number_valid(grid, line, number):
     #check if it's in our 3x3 square (not necessary if we've only built out the first row since there'd be nothing to check)
     #if we're in the 2nd row of the 3x3 square.
     # The row is only appended after to the grid after the fact so len(grid) is how many rows are above us
-    if (len(grid) + 2) % 3 == 0:
+    if len(grid) % 3 == 1:
         # if previous line didn't have this number
         return not is_number_in_relative_row(grid, number, -1, len(line))
         # if we're in the 3rd row of the 3x3 square
-    if (len(grid) + 1) % 3 == 0:
+    if len(grid) % 3 == 2:
         # if the previous line and line before don't have this number
         return not (is_number_in_relative_row(grid, number, -1, len(line)) or is_number_in_relative_row(grid, number,
                                                                                                         -2, len(line)))
@@ -76,8 +79,14 @@ def pretty_Print(grid):
         if(r + 1) % 3 == 0 and (r + 1) != gridSize:
             print("-" * ( (gridSize * 3) + 2))
 
-def generate():
+def generate(depth = 0):
+    if depth == maxStackDepth:
+        print("MAX STACK DEPTH REACHED. TRY AGAIN")
+        return
+
     grid = []
+    #so we don't spend too long trying to generate a puzzle that just wouldn't work
+    start_time = time.time()
     numbers = list(range(1, gridSize + 1))
     #row
     for i in range(gridSize):
@@ -94,6 +103,9 @@ def generate():
                 if repeat_counter == gridSize:
                     new_row = []
                     break
+                if time.time() - start_time > 0.3: #we're taking too long and likely ran into a problem. Dump the grid and try again
+                    generate(depth + 1)
+                    return
 
             #python has a while else clause that only happens when the while loop isn't broken out of
             else:
