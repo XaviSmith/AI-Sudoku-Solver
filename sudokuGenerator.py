@@ -1,9 +1,10 @@
 #Square matrix. Default 9x9
+import copy
 import random
 import time
 
 gridSize = 9
-maxStackDepth = 20
+maxStackDepth = 20  #Some random grid combinations won't work or will take to long to generate. Cap so we don't try forever with these.
 blankSquares = 40
 
 #e.g. check(from row2, index3, for 9 in, y + delta_y1, y + delta_y2)
@@ -41,6 +42,7 @@ def is_number_in_relative_row(grid, number, relative_row, row_index):
 
     return False
 
+
 #A number is valid if: it's not already in the row, column, or same grid square
 def is_number_valid(grid, line, number):
     #check if number is in our row
@@ -63,6 +65,22 @@ def is_number_valid(grid, line, number):
         return not (is_number_in_relative_row(grid, number, -1, len(line)) or is_number_in_relative_row(grid, number,
                                                                                                         -2, len(line)))
 
+    return True
+
+#Same as above, but with a finished grid
+def is_number_possible(grid, number, row, row_index):
+    if number in grid[row]: return False
+
+    for _row in grid:
+        if _row[row_index] == number: return False
+
+    if row % 3 == 1:
+        #2nd row of square
+        return not is_number_in_relative_row(grid, number, -1, row_index)
+    if row % 3 == 2:
+        #3rd row of square
+        return not (is_number_in_relative_row(grid, number, -1, row_index) or
+                    is_number_in_relative_row(grid, number, -2, row_index))
     return True
 
 def pretty_Print(grid):
@@ -91,14 +109,49 @@ def generate_grid_coordinates():
 
     return result
 
+#Essentially we get random parts of the grid one at a time, blank out the square, and see if only 1 number is possible in that square
+#Repeat until we have the specified blankSquares
 def remove_spaces(grid):
+    #python assignment doesn't make a new copy, just shares a reference, so we need a deep copy to not manipulate original grid.
+    blanked_grid = copy.deepcopy(grid)
     grid_coordinates = generate_grid_coordinates()
     random.shuffle(grid_coordinates)
 
-    for num_blanks in range(blankSquares):
-        x,y = grid_coordinates[num_blanks]
-        grid[x][y] = ' '
-        num_blanks += 1
+    #We want to keep track of how many times we've tried blanking the current grid. If we exceed a certain amount,
+    repeat_counter = 0
+    num_blanks = 0
+
+    while num_blanks < blankSquares:
+
+        #if we're on a repeat and the grid spot is already blanked, skip it.
+        if blanked_grid[x][y] == ' ':
+            del grid_coordinates[0]
+            continue
+
+        #Check if multiple numbers are possible in the selected coordinates
+        possible_numbers = 0
+        for i in range(1, gridSize + 1):
+            #blank out the number so we can check the possibilities afterward
+            num_to_check = blanked_grid[x][y]
+            blanked_grid[x][y] = ' '
+
+            if is_number_possible(blanked_grid, i, x, y):
+                possible_numbers += 1
+
+            blanked_grid[x][y] = num_to_check
+
+        #if there's only one possible number in that spot blank it out, otherwise try with a different coordinate
+        if possible_numbers == 1:
+            blanked_grid[x][y] = ' '
+            num_blanks += 1
+            repeat_counter = 0
+            del grid_coordinates[0]
+        else:
+            del grid_coordinates[0]
+
+    return blanked_grid
+
+
 
 
 def generate(depth = 0):
@@ -135,8 +188,8 @@ def generate(depth = 0):
 
         grid.append(new_row)
     pretty_Print(grid)
-    remove_spaces(grid)
+    puzzle_grid = remove_spaces(grid)
     print("\n")
-    pretty_Print(grid)
+    pretty_Print(puzzle_grid)
 
 generate()
