@@ -4,8 +4,8 @@ import random
 import time
 
 gridSize = 9
-maxStackDepth = 20  #Some random grid combinations won't work or will take to long to generate. Cap so we don't try forever with these.
-blankSquares = 40
+maxStackDepth = 80  #Some random grid combinations won't work or will take to long to generate. Cap so we don't try forever with these.
+blankSquares = 43 #runs into issues when we have more than about 43 blank squares
 
 #e.g. check(from row2, index3, for 9 in, y + delta_y1, y + delta_y2)
 def check_neighbouring_cells(row, row_index, number, delta1, delta2):
@@ -111,17 +111,36 @@ def generate_grid_coordinates():
 
 #Essentially we get random parts of the grid one at a time, blank out the square, and see if only 1 number is possible in that square
 #Repeat until we have the specified blankSquares
-def remove_spaces(grid):
+def remove_spaces(grid, depth = 0):
+
+    if depth == maxStackDepth:
+        print("\nTimeout reached. Could not generate puzzle. Try again with fewer blank spaces or a larger MaxStackDepth.")
+        return
+
     #python assignment doesn't make a new copy, just shares a reference, so we need a deep copy to not manipulate original grid.
     blanked_grid = copy.deepcopy(grid)
     grid_coordinates = generate_grid_coordinates()
     random.shuffle(grid_coordinates)
 
     #We want to keep track of how many times we've tried blanking the current grid. If we exceed a certain amount,
+    #dump the blanked_grid and try again.
     repeat_counter = 0
     num_blanks = 0
 
     while num_blanks < blankSquares:
+        #if we've gone through everything already, try a few more times
+        if len(grid_coordinates) == 0:
+            if repeat_counter < maxStackDepth:
+                grid_coordinates = generate_grid_coordinates()
+                random.shuffle(grid_coordinates)
+                repeat_counter += 1
+            #We weren't able to finish the current blanked grid. Dump it and try a new one
+            else:
+                if depth % 5 == 0:
+                    print("\nGenerating blank spaces...")
+                return remove_spaces(grid, depth + 1)
+
+        x, y = grid_coordinates[0]
 
         #if we're on a repeat and the grid spot is already blanked, skip it.
         if blanked_grid[x][y] == ' ':
@@ -190,6 +209,7 @@ def generate(depth = 0):
     pretty_Print(grid)
     puzzle_grid = remove_spaces(grid)
     print("\n")
-    pretty_Print(puzzle_grid)
+    if puzzle_grid:
+        pretty_Print(puzzle_grid)
 
 generate()
