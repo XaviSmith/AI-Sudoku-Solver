@@ -13,6 +13,7 @@ Written in Python
 - Generate executable 
 - Have menu handle unexpected input 
 - Allow user to specify number of blank spaces and MaxStackDepth for genrating puzzles 
+- Clean up file structure
 
 
 
