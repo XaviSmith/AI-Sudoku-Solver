@@ -5,7 +5,7 @@ import time
 
 gridSize = 9
 maxStackDepth = 80  #Some random grid combinations won't work or will take to long to generate. Cap so we don't try forever with these.
-blankSquares = 43 #runs into issues when we have more than about 43 blank squares
+blankSquares = 30 #runs into issues when we have more than about 43 blank squares
 
 #e.g. check(from row2, index3, for 9 in, y + delta_y1, y + delta_y2)
 def check_neighbouring_cells(row, row_index, number, delta1, delta2):
@@ -69,19 +69,43 @@ def is_number_valid(grid, line, number):
 
 #Same as above, but with a finished grid
 def is_number_possible(grid, number, row, row_index):
+
+    #check row
     if number in grid[row]: return False
 
+    # column. len(line) will be whatever we've generated up to (e.g. 7 columns into the grid)
     for _row in grid:
-        if _row[row_index] == number: return False
+        if _row[row_index] == number:
+            return False
 
-    if row % 3 == 1:
-        #2nd row of square
-        return not is_number_in_relative_row(grid, number, -1, row_index)
-    if row % 3 == 2:
-        #3rd row of square
-        return not (is_number_in_relative_row(grid, number, -1, row_index) or
-                    is_number_in_relative_row(grid, number, -2, row_index))
+    #Get our 3x3 square relative to our current position and check if the number is in any of those squares.
+    #Top left corner will always be how many indexes past row % 3 we are (0 if we're in the first row of a 3x3 square) and same for column
+    #e.g. if we're at row 8 column 4 (starting from 0) -> 7 % 3 = 1, 3 % 3 = 0, so the square starts at 6, 3 or row 7 column 4
+    #TODO: simplify is_number_valid to work like this but only up to the selected row[row_index]
+
+    corner_row = row - row % 3
+    corner_col = row_index - row_index % 3
+
+    #We know our grid is fully generated so just check every square in the grid
+    for i in range(3):
+        for j in range(3):
+            if grid[corner_row + i][corner_col + j] == number:
+                return False
     return True
+
+
+#print the grid as an array so we can easily copy it over to the solver
+def printBlankedGrid(grid):
+    # python assignment doesn't make a new copy, just shares a reference, so we need a deep copy to not manipulate original grid.
+    array_grid = copy.deepcopy(grid)
+
+    for i in range(gridSize):
+        for j in range(gridSize):
+            if array_grid[i][j] == ' ':
+                array_grid[i][j] = 0
+
+    print(array_grid)
+
 
 def pretty_Print(grid):
     print("Puzzle:")
@@ -97,6 +121,7 @@ def pretty_Print(grid):
         #Separator
         if(r + 1) % 3 == 0 and (r + 1) != gridSize:
             print("-" * ( (gridSize * 3) + 2))
+
 
 #Generates a list of coordinates for the grid (e.g. [ [0,0], [0,1] ... [9,9] ])
 #TODO: Generate coordinates while generating the grid
@@ -117,7 +142,6 @@ def remove_spaces(grid, depth = 0):
         print("\nTimeout reached. Could not generate puzzle. Try again with fewer blank spaces or a larger MaxStackDepth.")
         return
 
-    #python assignment doesn't make a new copy, just shares a reference, so we need a deep copy to not manipulate original grid.
     blanked_grid = copy.deepcopy(grid)
     grid_coordinates = generate_grid_coordinates()
     random.shuffle(grid_coordinates)
@@ -168,6 +192,7 @@ def remove_spaces(grid, depth = 0):
         else:
             del grid_coordinates[0]
 
+    print('\n Puzzle generated!')
     return blanked_grid
 
 
@@ -206,10 +231,89 @@ def generate(depth = 0):
                 new_row.append(_number)
 
         grid.append(new_row)
-    pretty_Print(grid)
-    puzzle_grid = remove_spaces(grid)
-    print("\n")
-    if puzzle_grid:
-        pretty_Print(puzzle_grid)
 
-generate()
+    return grid
+
+
+#recursively goes through the grid possibilities until we hit a solution using backtracking.
+def solve(grid, row = 0, col = 0):
+    #last column. If we're at the last row, we solved it and are done otherwise move to the next row
+    if col == 9:
+        if row == 8:
+            return True
+
+        row += 1
+        col = 0
+
+    #number already filled. move on to the next one
+    if grid[row][col] > 0:
+        return solve(grid, row, col + 1)
+
+    #other columns. See if there's a valid move. If so move on to the next, if not set it to 0 and iterate
+    for number in range(1, 10):
+        if is_number_possible(grid, number, row, col):
+            grid[row][col] = number
+
+            if solve(grid, row, col + 1):
+                return True
+
+        grid[row][col] = 0
+
+    #We hit a dead end, go back
+    return False
+
+
+def mainMenu(choice=0, grid=None):
+
+    if choice <= 0:
+        print("\n***************************MAIN MENU********************************\n"
+              "\nPress 1 to generate a grid, 2 to solve a generated grid. 3 to exit")
+        choice = int(input())
+
+    if choice == 1:
+        if grid == None:
+            grid = generate()
+            print("Grid complete!")
+
+        print("\n********************************************************************\n"
+              "Press 1 to pretty print the grid, 2 to turn it into a new puzzle. 3 to go back to main menu.")
+        choice = int(input())
+
+        match choice:
+            case 1:
+                pretty_Print(grid)
+                mainMenu(1, grid)
+
+            case 2:
+                puzzle_grid = remove_spaces(grid)
+                if puzzle_grid:
+                    print("***********************************************************\n"
+                          "Press 1 to pretty print the puzzle grid, 2 to print it as an array for the solver.")
+                    choice = int(input())
+                    match choice:
+                        case 1: pretty_Print(puzzle_grid)
+                        case 2: printBlankedGrid(puzzle_grid)
+                    mainMenu(1, grid)
+
+            case 3: mainMenu(0, grid)
+
+    elif choice == 2:
+        print("Pass in a grid in the following format: '[[1,2,3,0,0,6,7,8,9], [row2], [row3], ..., [row9]]' where 0 is a blank space. Use the generator for an example")
+        _grid = eval(input())
+        print(_grid)
+        if solve(_grid):
+            print("Solved grid:")
+            pretty_Print(_grid)
+            mainMenu(0)
+        else:
+            print("Could not solve grid.\n")
+
+        mainMenu()
+
+    elif choice == 3:
+        exit()
+
+
+mainMenu()
+
+
