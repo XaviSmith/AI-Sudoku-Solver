@@ -2,7 +2,7 @@
 # Sudoku AI Solver and generator
 
 
-Capable of generating a valid sudoku puzzle at random and/or solving any valid sudoku puzzle using backtracing. 
+Capable of generating a valid sudoku puzzle at random and/or solving any valid sudoku puzzle using backtracking. 
 
 Every puzzle generated will have only 1 solution.
 
